@@ -1,5 +1,14 @@
 # Analytics.js
 
+## Instructions
+
+- Add any dependencies to `package.json`
+- List any new integrations to enable in `lib/integrations.js`
+- Run `make analytics.min.js` to build that file as well as `analytics.js` (`make distclean` will clear node_modules, and `make clean` will clear the output files)
+- Copy the resulting files into `www/static/analytics` within the `t3` repo
+
+## Overview
+
 Analytics.js makes it easy to collect customer data and send it to many different tools using a single, unified API.
 
 Analytics.js is open source and is one of the libraries that powers [Segment](https://segment.com), the managed, hassle-free way to collect customer data in the browser and beyond.

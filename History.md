@@ -1,3 +1,9 @@
+2018-10-18
+==================
+
+  * Forked repo from https://github.com/segmentio/analytics.js
+  * Changed to build with browserify instead of duo + match UnitedMasters analytics bootstrap
+  * Add Intercom.io as integration
 
 2.11.0 / 2015-08-17
 ==================

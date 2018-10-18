@@ -9,10 +9,10 @@ clean:
 	rm -rf *.log analytics.js analytics.min.js
 
 distclean: clean
-	rm -rf components node_modules
+	rm -rf node_modules
 
 analytics.js: node_modules $(SRC) package.json
-	./node_modules/.bin/duo --stdout --standalone analytics lib/index.js > $@
+	./node_modules/.bin/browserify -e lib/index.js -o $@
 
 analytics.min.js: analytics.js
 	./node_modules/.bin/uglifyjs $< --output $@
