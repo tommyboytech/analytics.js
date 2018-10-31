@@ -12,8 +12,9 @@ var integration = require('@segment/analytics.js-integration');
  */
 
 var RocketFuel = module.exports = integration('Rocket Fuel')
-  .option('accountId', '37037')
-  .option('universalActionId', '20809061')
+  .option('accountId', '')
+  .option('universalActionId', '')
+  .tag('stargate step', '<img src="//{{ actionId }}p.rfihub.com/ca.gif?rb={{ accountId }}&ca={{ actionId }}&ra={{ cacheBuster }}&_o={{ accountId }}&_t={{ actionId }}"/>')
   .tag('universal', '<img src="//{{ universalActionId }}p.rfihub.com/ca.gif?rb={{ accountId }}&ca={{ universalActionId }}&_o=37037&_t=20809061&ra={{ cacheBuster }}"/>')
   .mapping('events');
 
@@ -36,49 +37,28 @@ RocketFuel.prototype.page = function() {
 };
 
 /**
- * Track conversion events.
+ * Track events.
  *
  * @param {Track} track
  */
 
 RocketFuel.prototype.track = function(track) {
-  var orderId = track.orderId();
-  var total = (track.total() || 0).toFixed(2);
-  var productIds = this.productIds(track.products());
-
+  var eventName = track && track.obj && track.obj.event;
   var events = this.events(track.event());
   var self = this;
-  each(events, function(event) {
-    if (orderId && total) {
-      return self.load('completed order', {
-        actionId: event,
-        orderTotal: total,
-        orderId: orderId,
-        productIds: productIds,
-        cacheBuster: self.cacheBuster()
-      });
-    }
-    return self.load('conversion', {
-      actionId: event,
-      cacheBuster: self.cacheBuster()
-    });
-  });
-};
+  var eventActionIdMap = {
+    'Load Homepage': '20809060',
+    'Click Join Now': '20809169',
+    'Click Stargate Next': '20809170',
+    'Click SoundCloud Connect': '20809171',
+    'Click YouTube Connect': '20809172',
+    'Click Stargate Skip': '20809062',
+  }
 
-/**
- * Join all the product IDs together for RocketFuel.
- *
- * @api private
- * @param {Object[]} products
- */
-
-// TODO: Refactor to use pluck(products, 'id').join(,)
-RocketFuel.prototype.productIds = function(products) {
-  var ids = [];
-  each(products, function(product) {
-    ids.push(product.id);
+  return self.load('stargate step', {
+    actionId: eventActionIdMap[eventName] || '',
+    cacheBuster: self.cacheBuster()
   });
-  return ids.join(',');
 };
 
 /**
