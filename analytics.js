@@ -24,7 +24,6 @@ module.exports = analytics;
  */
 
 var analytics = require('./analytics');
-var Segment = require('./integrations').segmentio;
 
 // Get a handle on the global analytics queue, as initialized by the
 // analytics.js snippet. The snippet stubs out the analytics.js API and queues
@@ -42,16 +41,17 @@ analytics.add_persistent_properties = function(props) {
     }
 };
 
-_SegmentNormalize = Segment.prototype.normalize;
-Segment.prototype.normalize = function(msg) {
+_analyticsNormalize = analytics.normalize;
+analytics.normalize = function(msg) {
   msg.properties = msg.properties || {};
   for (var key in analytics._persistent_properties) {
     if (msg.properties[key] === undefined) {
       msg.properties[key] = analytics._persistent_properties[key];
     }
   }
-  return _SegmentNormalize.call(this, msg);
-}
+
+  return _analyticsNormalize.call(analytics, msg);
+};
 
 // Initialize analytics.js. CDN will render configuration objects into
 // `{"Facebook Pixel":{"legacyEvents":{},"initWithExistingTraits":false,"pixelId":"974260729352574","standardEvents":{}},"Google Analytics":{"trackingId":"UA-85527854-1","classic":false,"includeSearch":false,"reportUncaughtExceptions":false,"anonymizeIp":false,"domain":"","enhancedLinkAttribution":false,"nonInteraction":false,"siteSpeedSampleRate":1,"trackCategorizedPages":true,"trackNamedPages":true,"dimensions":{},"metrics":{},"mobileTrackingId":"","sampleRate":100,"sendUserId":false,"contentGroupings":{},"doubleClick":false,"enhancedEcommerce":false,"ignoredReferrers":[]},"Mixpanel":{"secureCookie":false,"setAllTraitsByDefault":true,"trackAllPages":false,"consolidatedPageCalls":true,"crossSubdomainCookie":true,"increments":[],"legacySuperProperties":false,"people":true,"peopleProperties":[],"token":"4a4479ef2bd67f8c9776a8d368cc6772","persistence":"cookie","superProperties":[],"trackCategorizedPages":false,"trackNamedPages":false},"Twitter Ads":{"events":{"email subscribe":"nvl74","play":"nvl75"},"identifier":"productId","page":"nvl72","universalTagPixelId":""},"Segment.io":{"apiKey":"DrDc0RtB8RMUze5FRRE2VePYpbLGz1d4","addBundledMetadata":true,"unbundledIntegrations":[]}}` and `{"track":{}}` using project settings.
@@ -84,7 +84,7 @@ analyticsq = null;
 global.analytics = analytics;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./analytics":1,"./integrations":3}],3:[function(require,module,exports){
+},{"./analytics":1}],3:[function(require,module,exports){
 module.exports = {
   'facebook-pixel': require('@segment/analytics.js-integration-facebook-pixel'),
   'google-analytics': require('@segment/analytics.js-integration-google-analytics'),
