@@ -24,6 +24,7 @@ module.exports = analytics;
  */
 
 var analytics = require('./analytics');
+var Segment = require('./integrations').segmentio;
 
 // Get a handle on the global analytics queue, as initialized by the
 // analytics.js snippet. The snippet stubs out the analytics.js API and queues
@@ -33,12 +34,24 @@ var analyticsq = global.analytics || [];
 // Parse the version from the analytics.js snippet.
 var snippetVersion = analyticsq && analyticsq.SNIPPET_VERSION ? parseFloat(analyticsq.SNIPPET_VERSION, 10) : 0;
 
+// add persistent props support
 analytics._persistent_properties = {};
 analytics.add_persistent_properties = function(props) {
     for (var key in props) {
         analytics._persistent_properties[key] = props[key];
     }
 };
+
+_SegmentNormalize = Segment.prototype.normalize;
+Segment.prototype.normalize = function(msg) {
+  msg.properties = msg.properties || {};
+  for (var key in analytics._persistent_properties) {
+    if (msg.properties[key] === undefined) {
+      msg.properties[key] = analytics._persistent_properties[key];
+    }
+  }
+  return _SegmentNormalize.call(this, msg);
+}
 
 // Initialize analytics.js. CDN will render configuration objects into
 // `{"Facebook Pixel":{"legacyEvents":{},"initWithExistingTraits":false,"pixelId":"974260729352574","standardEvents":{}},"Google Analytics":{"trackingId":"UA-85527854-1","classic":false,"includeSearch":false,"reportUncaughtExceptions":false,"anonymizeIp":false,"domain":"","enhancedLinkAttribution":false,"nonInteraction":false,"siteSpeedSampleRate":1,"trackCategorizedPages":true,"trackNamedPages":true,"dimensions":{},"metrics":{},"mobileTrackingId":"","sampleRate":100,"sendUserId":false,"contentGroupings":{},"doubleClick":false,"enhancedEcommerce":false,"ignoredReferrers":[]},"Mixpanel":{"secureCookie":false,"setAllTraitsByDefault":true,"trackAllPages":false,"consolidatedPageCalls":true,"crossSubdomainCookie":true,"increments":[],"legacySuperProperties":false,"people":true,"peopleProperties":[],"token":"4a4479ef2bd67f8c9776a8d368cc6772","persistence":"cookie","superProperties":[],"trackCategorizedPages":false,"trackNamedPages":false},"Twitter Ads":{"events":{"email subscribe":"nvl74","play":"nvl75"},"identifier":"productId","page":"nvl72","universalTagPixelId":""},"Segment.io":{"apiKey":"DrDc0RtB8RMUze5FRRE2VePYpbLGz1d4","addBundledMetadata":true,"unbundledIntegrations":[]}}` and `{"track":{}}` using project settings.
@@ -71,7 +84,7 @@ analyticsq = null;
 global.analytics = analytics;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./analytics":1}],3:[function(require,module,exports){
+},{"./analytics":1,"./integrations":3}],3:[function(require,module,exports){
 module.exports = {
   'facebook-pixel': require('@segment/analytics.js-integration-facebook-pixel'),
   'google-analytics': require('@segment/analytics.js-integration-google-analytics'),
@@ -79,9 +92,10 @@ module.exports = {
   'mixpanel': require('@segment/analytics.js-integration-mixpanel'),
   'segmentio': require('@segment/analytics.js-integration-segmentio'),
   'twitter-ads': require('@segment/analytics.js-integration-twitter-ads'),
+  'rocket-fuel': require('../thirdparty/rocketfuel.js'),
 }
 
-},{"@segment/analytics.js-integration-facebook-pixel":32,"@segment/analytics.js-integration-google-analytics":33,"@segment/analytics.js-integration-intercom":34,"@segment/analytics.js-integration-mixpanel":41,"@segment/analytics.js-integration-segmentio":48,"@segment/analytics.js-integration-twitter-ads":55}],4:[function(require,module,exports){
+},{"../thirdparty/rocketfuel.js":158,"@segment/analytics.js-integration-facebook-pixel":32,"@segment/analytics.js-integration-google-analytics":33,"@segment/analytics.js-integration-intercom":34,"@segment/analytics.js-integration-mixpanel":41,"@segment/analytics.js-integration-segmentio":48,"@segment/analytics.js-integration-twitter-ads":55}],4:[function(require,module,exports){
 'use strict';
 
 /*
@@ -19281,4 +19295,74 @@ module.exports = function(val){
   }
 };
 
-},{}]},{},[2]);
+},{}],158:[function(require,module,exports){
+'use strict';
+
+/**
+ * Module dependencies.
+ */
+
+var each = require('component-each');
+var integration = require('@segment/analytics.js-integration');
+
+/**
+ * Expose `RocketFuel`.
+ */
+
+var RocketFuel = module.exports = integration('Rocket Fuel')
+  .option('accountId', '')
+  .option('universalActionId', '')
+  .tag('track', '<img src="//{{ actionId }}p.rfihub.com/ca.gif?rb={{ accountId }}&ca={{ actionId }}&ra={{ cacheBuster }}&_o={{ accountId }}&_t={{ actionId }}"/>')
+  .tag('universal', '<img src="//{{ universalActionId }}p.rfihub.com/ca.gif?rb={{ accountId }}&ca={{ universalActionId }}&_o=37037&_t=20809061&ra={{ cacheBuster }}"/>')
+  .mapping('events');
+
+/**
+ * Page load the universal pixel.
+ *
+ * @api public
+ * @param {Page} page
+ */
+
+RocketFuel.prototype.page = function() {
+  var user = this.analytics.user();
+  var custType = 'new';
+  if (user.id()) custType = 'existing';
+
+  this.load('universal', {
+    custType: custType,
+    cacheBuster: this.cacheBuster()
+  });
+};
+
+/**
+ * Track events.
+ *
+ * @param {Track} track
+ */
+
+RocketFuel.prototype.track = function(track) {
+  var actionId = track && track.obj && track.obj.properties && track.obj.properties.actionId;
+  var events = this.events(track.event());
+  var self = this;
+
+  if (!actionId) {
+    return;
+  }
+
+  return self.load('track', {
+    actionId: actionId,
+    cacheBuster: self.cacheBuster()
+  });
+};
+
+/**
+ * Generate a random number for cachebusting.
+ *
+ * @api private
+ */
+
+RocketFuel.prototype.cacheBuster = function() {
+  return Math.round(Math.random() * 99999999);
+};
+
+},{"@segment/analytics.js-integration":56,"component-each":93}]},{},[2]);
