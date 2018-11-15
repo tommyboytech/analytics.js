@@ -33,11 +33,24 @@ var analyticsq = global.analytics || [];
 // Parse the version from the analytics.js snippet.
 var snippetVersion = analyticsq && analyticsq.SNIPPET_VERSION ? parseFloat(analyticsq.SNIPPET_VERSION, 10) : 0;
 
+// add persistent props support
 analytics._persistent_properties = {};
 analytics.add_persistent_properties = function(props) {
     for (var key in props) {
         analytics._persistent_properties[key] = props[key];
     }
+};
+
+_analyticsNormalize = analytics.normalize;
+analytics.normalize = function(msg) {
+  msg.properties = msg.properties || {};
+  for (var key in analytics._persistent_properties) {
+    if (msg.properties[key] === undefined) {
+      msg.properties[key] = analytics._persistent_properties[key];
+    }
+  }
+
+  return _analyticsNormalize.call(analytics, msg);
 };
 
 // Initialize analytics.js. CDN will render configuration objects into
@@ -79,9 +92,10 @@ module.exports = {
   'mixpanel': require('@segment/analytics.js-integration-mixpanel'),
   'segmentio': require('@segment/analytics.js-integration-segmentio'),
   'twitter-ads': require('@segment/analytics.js-integration-twitter-ads'),
+  'rocket-fuel': require('../thirdparty/rocketfuel.js'),
 }
 
-},{"@segment/analytics.js-integration-facebook-pixel":32,"@segment/analytics.js-integration-google-analytics":33,"@segment/analytics.js-integration-intercom":34,"@segment/analytics.js-integration-mixpanel":41,"@segment/analytics.js-integration-segmentio":48,"@segment/analytics.js-integration-twitter-ads":55}],4:[function(require,module,exports){
+},{"../thirdparty/rocketfuel.js":158,"@segment/analytics.js-integration-facebook-pixel":32,"@segment/analytics.js-integration-google-analytics":33,"@segment/analytics.js-integration-intercom":34,"@segment/analytics.js-integration-mixpanel":41,"@segment/analytics.js-integration-segmentio":48,"@segment/analytics.js-integration-twitter-ads":55}],4:[function(require,module,exports){
 'use strict';
 
 /*
@@ -19281,4 +19295,74 @@ module.exports = function(val){
   }
 };
 
-},{}]},{},[2]);
+},{}],158:[function(require,module,exports){
+'use strict';
+
+/**
+ * Module dependencies.
+ */
+
+var each = require('component-each');
+var integration = require('@segment/analytics.js-integration');
+
+/**
+ * Expose `RocketFuel`.
+ */
+
+var RocketFuel = module.exports = integration('Rocket Fuel')
+  .option('accountId', '')
+  .option('universalActionId', '')
+  .tag('track', '<img src="//{{ actionId }}p.rfihub.com/ca.gif?rb={{ accountId }}&ca={{ actionId }}&ra={{ cacheBuster }}&_o={{ accountId }}&_t={{ actionId }}"/>')
+  .tag('universal', '<img src="//{{ universalActionId }}p.rfihub.com/ca.gif?rb={{ accountId }}&ca={{ universalActionId }}&_o=37037&_t=20809061&ra={{ cacheBuster }}"/>')
+  .mapping('events');
+
+/**
+ * Page load the universal pixel.
+ *
+ * @api public
+ * @param {Page} page
+ */
+
+RocketFuel.prototype.page = function() {
+  var user = this.analytics.user();
+  var custType = 'new';
+  if (user.id()) custType = 'existing';
+
+  this.load('universal', {
+    custType: custType,
+    cacheBuster: this.cacheBuster()
+  });
+};
+
+/**
+ * Track events.
+ *
+ * @param {Track} track
+ */
+
+RocketFuel.prototype.track = function(track) {
+  var actionId = track && track.obj && track.obj.properties && track.obj.properties.actionId;
+  var events = this.events(track.event());
+  var self = this;
+
+  if (!actionId) {
+    return;
+  }
+
+  return self.load('track', {
+    actionId: actionId,
+    cacheBuster: self.cacheBuster()
+  });
+};
+
+/**
+ * Generate a random number for cachebusting.
+ *
+ * @api private
+ */
+
+RocketFuel.prototype.cacheBuster = function() {
+  return Math.round(Math.random() * 99999999);
+};
+
+},{"@segment/analytics.js-integration":56,"component-each":93}]},{},[2]);
